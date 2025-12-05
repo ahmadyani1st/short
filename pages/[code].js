@@ -39,37 +39,60 @@ export default function ShortLinkPage({
 
   return (
     <>
-    <Head>
-  {/* ===== TITLE ===== */}
-  <title>{firebaseData?.title || 'Loading...'}</title>
-  <meta name="title" content={firebaseData?.title || ''} />
-  
-  {/* ===== OPEN GRAPH ===== */}
-  <meta property="og:type" content="website" />
-  {/* PENTING: URL HARUS SHORTLINK ANDA SENDIRI */}
-  <meta property="og:url" content={`https://${req.headers.host}/${code}`} />
-  <meta property="og:title" content={firebaseData?.title || ''} />
-  <meta property="og:description" content={firebaseData?.description || ''} />
-  <meta property="og:image" content={firebaseData?.image || ''} />
-  <meta property="og:site_name" content="Jejak Mufassir" />
-  
-  {/* ===== TWITTER ===== */}
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:url" content={`https://${req.headers.host}/${code}`} />
-  <meta name="twitter:title" content={firebaseData?.title || ''} />
-  <meta name="twitter:description" content={firebaseData?.description || ''} />
-  <meta name="twitter:image" content={firebaseData?.image || ''} />
-  
-  {/* ===== ROBOTS ===== */}
-  <meta name="robots" content="noindex, nofollow" />
-  
-  {/* ===== CANONICAL (ke shortlink sendiri) ===== */}
-  <link rel="canonical" href={`https://${req.headers.host}/${code}`} />
-  
-  {/* ===== META LAINNYA ===== */}
-  <meta name="description" content={firebaseData?.description || ''} />
-  <meta name="image" content={firebaseData?.image || ''} />
-</Head>
+      <Head>
+        {/* Title - HANYA dari Firebase */}
+        <title>{title}</title>
+        <meta name="title" content={title} />
+        
+        {/* Description - HANYA dari Firebase */}
+        <meta name="description" content={description} />
+        
+        {/* ===== OPEN GRAPH TAGS ===== */}
+        {/* TYPE */}
+        <meta property="og:type" content="website" />
+        
+        {/* URL - INI YANG PENTING: gunakan target URL */}
+        <meta property="og:url" content={canonicalUrl} />
+        
+        {/* TITLE - HANYA dari Firebase */}
+        <meta property="og:title" content={title} />
+        
+        {/* DESCRIPTION - HANYA dari Firebase */}
+        <meta property="og:description" content={description} />
+        
+        {/* IMAGE - HANYA dari Firebase */}
+        <meta property="og:image" content={image} />
+        {image && (
+          <>
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:image:alt" content={title} />
+          </>
+        )}
+        
+        {/* SITE NAME - kosongkan atau beri nama Anda */}
+        <meta property="og:site_name" content="" />
+        
+        {/* ===== TWITTER CARDS ===== */}
+        <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+        <meta name="twitter:url" content={canonicalUrl} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={image} />
+        
+        {/* ===== META LAINNYA ===== */}
+        {/* HINDARI meta viewport di Head untuk Facebook */}
+        <meta name="robots" content="noindex, nofollow" />
+        
+        {/* Canonical URL ke target */}
+        <link rel="canonical" href={canonicalUrl} />
+        
+        {/* Prev/Next kosong untuk hindari pagination */}
+        <link rel="prev" href="" />
+        <link rel="next" href="" />
+        
+        {/* Hapus semua meta yang tidak perlu */}
+      </Head>
 
       {/* VIEWPORT HANYA di HTML Body */}
       <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -246,102 +269,36 @@ export default function ShortLinkPage({
 
 // ===== SERVER SIDE RENDERING =====
 export async function getServerSideProps(context) {
-  const { code } = req.query;
+  const { code } = context.params;
   const host = context.req.headers.host;
-  const protocol = host.startsWith('localhost') ? 'http' : 'https';
-  
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const currentShortUrl = `${protocol}://${host}/${code}`;
+
   try {
-    // Fetch dari Firebase
+    // 1. FETCH DATA DARI FIREBASE
     const firebaseRes = await fetch(
-      `https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`
+      `https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`,
+      { timeout: 5000 }
     );
     
-    if (!firebaseRes.ok) {
-      return { notFound: true };
-    }
+    if (!firebaseRes.ok) throw new Error('Firebase fetch failed');
     
-    const data = await firebaseRes.json();
+    const firebaseData = await firebaseRes.json();
     
-    if (!data || !data.linkproduk) {
-      return { notFound: true };
-    }
-    
-    // Data untuk SEO
-    const seoData = {
-      title: data.title || data.linkproduk,
-      description: data.description || '',
-      image: data.image || '',
-      url: `${protocol}://${host}/${code}`,
-      targetUrl: data.linkproduk
-    };
-    
-    // Jika tidak ada metadata di Firebase, coba ambil dari target
-    if (!data.title || !data.description) {
-      try {
-        const targetRes = await fetch(data.linkproduk, {
-          headers: {
-            'User-Agent': 'FacebookExternalHit/1.0'
-          },
-          timeout: 3000
-        });
-        
-        const html = await targetRes.text();
-        
-        // Extract title
-        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-        if (titleMatch && !data.title) {
-          seoData.title = titleMatch[1].trim();
+    // Validasi data
+    if (!firebaseData || !firebaseData.linkproduk) {
+      return {
+        props: {
+          error: 'Short link not found',
+          firebaseData: null,
+          targetUrl: null,
+          ogTitle: null,
+          ogDescription: null,
+          ogImage: null
         }
-        
-        // Extract description
-        const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
-        if (descMatch && !data.description) {
-          seoData.description = descMatch[1].trim();
-        }
-        
-        // Extract image
-        const imgMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
-        if (imgMatch && !data.image) {
-          seoData.image = imgMatch[1].trim();
-        }
-        
-        // Update Firebase dengan data baru
-        await fetch(
-          `https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              title: seoData.title,
-              description: seoData.description,
-              image: seoData.image,
-              lastUpdated: new Date().toISOString()
-            })
-          }
-        );
-        
-      } catch (error) {
-        console.log('Failed to fetch target metadata:', error.message);
-      }
+      };
     }
-    
-    return {
-      props: {
-        seoData,
-        targetUrl: data.linkproduk,
-        code
-      }
-    };
-    
-  } catch (error) {
-    return {
-      props: {
-        error: 'Failed to load',
-        targetUrl: null,
-        seoData: null
-      }
-    };
-  }
-}
+
     const targetUrl = firebaseData.linkproduk;
     
     // 2. EXTRACT DATA DARI FIREBASE (PRIORITAS UTAMA)

@@ -1,4 +1,3 @@
-// pages/[code].js
 import Head from 'next/head';
 import { useEffect } from 'react';
 

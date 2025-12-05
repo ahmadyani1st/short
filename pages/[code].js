@@ -246,36 +246,102 @@ export default function ShortLinkPage({
 
 // ===== SERVER SIDE RENDERING =====
 export async function getServerSideProps(context) {
-  const { code } = context.params;
+  const { code } = req.query;
   const host = context.req.headers.host;
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const currentShortUrl = `${protocol}://${host}/${code}`;
-
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  
   try {
-    // 1. FETCH DATA DARI FIREBASE
+    // Fetch dari Firebase
     const firebaseRes = await fetch(
-      `https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`,
-      { timeout: 5000 }
+      `https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`
     );
     
-    if (!firebaseRes.ok) throw new Error('Firebase fetch failed');
-    
-    const firebaseData = await firebaseRes.json();
-    
-    // Validasi data
-    if (!firebaseData || !firebaseData.linkproduk) {
-      return {
-        props: {
-          error: 'Short link not found',
-          firebaseData: null,
-          targetUrl: null,
-          ogTitle: null,
-          ogDescription: null,
-          ogImage: null
-        }
-      };
+    if (!firebaseRes.ok) {
+      return { notFound: true };
     }
-
+    
+    const data = await firebaseRes.json();
+    
+    if (!data || !data.linkproduk) {
+      return { notFound: true };
+    }
+    
+    // Data untuk SEO
+    const seoData = {
+      title: data.title || data.linkproduk,
+      description: data.description || '',
+      image: data.image || '',
+      url: `${protocol}://${host}/${code}`,
+      targetUrl: data.linkproduk
+    };
+    
+    // Jika tidak ada metadata di Firebase, coba ambil dari target
+    if (!data.title || !data.description) {
+      try {
+        const targetRes = await fetch(data.linkproduk, {
+          headers: {
+            'User-Agent': 'FacebookExternalHit/1.0'
+          },
+          timeout: 3000
+        });
+        
+        const html = await targetRes.text();
+        
+        // Extract title
+        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+        if (titleMatch && !data.title) {
+          seoData.title = titleMatch[1].trim();
+        }
+        
+        // Extract description
+        const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        if (descMatch && !data.description) {
+          seoData.description = descMatch[1].trim();
+        }
+        
+        // Extract image
+        const imgMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+        if (imgMatch && !data.image) {
+          seoData.image = imgMatch[1].trim();
+        }
+        
+        // Update Firebase dengan data baru
+        await fetch(
+          `https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              title: seoData.title,
+              description: seoData.description,
+              image: seoData.image,
+              lastUpdated: new Date().toISOString()
+            })
+          }
+        );
+        
+      } catch (error) {
+        console.log('Failed to fetch target metadata:', error.message);
+      }
+    }
+    
+    return {
+      props: {
+        seoData,
+        targetUrl: data.linkproduk,
+        code
+      }
+    };
+    
+  } catch (error) {
+    return {
+      props: {
+        error: 'Failed to load',
+        targetUrl: null,
+        seoData: null
+      }
+    };
+  }
+}
     const targetUrl = firebaseData.linkproduk;
     
     // 2. EXTRACT DATA DARI FIREBASE (PRIORITAS UTAMA)

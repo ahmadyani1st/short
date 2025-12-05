@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       data: {
         targetUrl: data?.linkproduk,
         metadata: {
-          title: data?.title,
+          title: data?.name,
           description: data?.description,
           image: data?.image
         }

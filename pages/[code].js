@@ -298,14 +298,34 @@ export async function getServerSideProps(context) {
       };
     }
 
-    const targetUrl = firebaseData.linkproduk;
+    // 2. EKSTRAK DAN PROSES URL DENGAN AFFID JIKA ADA
+    let targetUrl = firebaseData.linkproduk;
+    const affId = firebaseData.affId; // Ambil affId dari Firebase
     
-    // 2. EXTRACT DATA DARI FIREBASE (PRIORITAS UTAMA)
+    // Jika ada affId, tambahkan ke URL
+    if (affId && targetUrl) {
+      try {
+        const url = new URL(targetUrl);
+        
+        // Hapus parameter affId yang sudah ada jika ada
+        url.searchParams.delete('affId');
+        
+        // Tambahkan affId dari Firebase
+        url.searchParams.append('affId', affId);
+        
+        targetUrl = url.toString();
+      } catch (urlError) {
+        console.error('Error processing URL with affId:', urlError);
+        // Tetap gunakan URL asli jika ada error
+      }
+    }
+    
+    // 3. EXTRACT DATA DARI FIREBASE (PRIORITAS UTAMA)
     const firebaseTitle = firebaseData.title || '';
     const firebaseDescription = firebaseData.description || '';
     const firebaseImage = firebaseData.image || '';
     
-    // 3. FALLBACK: Ambil dari target URL JIKA data Firebase kosong
+    // 4. FALLBACK: Ambil dari target URL JIKA data Firebase kosong
     let ogTitle = firebaseTitle;
     let ogDescription = firebaseDescription;
     let ogImage = firebaseImage;
@@ -383,13 +403,14 @@ export async function getServerSideProps(context) {
       }
     }
 
-    // 4. RETURN PROPS
+    // 5. RETURN PROPS
     return {
       props: {
         firebaseData: {
           title: ogTitle,
           description: ogDescription,
-          image: ogImage
+          image: ogImage,
+          affId: affId || null
         },
         targetUrl,
         ogTitle,

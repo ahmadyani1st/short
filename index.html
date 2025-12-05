@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    // Ambil kode dari URL
+    const path = window.location.pathname;
+    const code = path.replace(/\//g, '');
+    
+    if (code) {
+      // Fetch dari Firebase
+      fetch(`https://jejak-mufassir-default-rtdb.firebaseio.com/shortUrls/${code}.json`)
+        .then(r => r.json())
+        .then(data => {
+          if (data?.linkproduk) {
+            // Update meta tags
+            document.title = data.name || 'Redirecting...';
+            document.querySelector('meta[property="og:title"]').content = data.name || 'Buku Beyond The Inspiration';
+            document.querySelector('meta[property="og:description"]').content = data.description || 'Description';
+            document.querySelector('meta[property="og:image"]').content = data.image || 'default-image.jpg';
+            document.querySelector('meta[property="og:url"]').content = data.linkproduk;
+            
+            // Redirect
+            setTimeout(() => {
+              window.location.href = data.linkproduk;
+            }, 100);
+          }
+        });
+    }
+  </script>
+  
+  <meta property="og:title" content="Loading...">
+  <meta property="og:description" content="Loading...">
+  <meta property="og:image" content="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhSmej7x_CxfZ6uv2lOESsm1ZzGU7MtsGnWtFdhCDDGaIbSsHles2ErbrWuIIbTay-PFd1dJ6tLXSh10vFgN5IPxlmfn9nGqTT8YU1j3T96VQzyb5Nfr_0ePHL0OzM76y2E3JHEfiAX0r06MX8Bw5b0XnQ2BGNbVgEE7X75UgkOs-iM0ERim6umGQaTeRir/w0/Beyond%20The%20Inspiration;%2099K%20-%20450gr.jpg">
+  <meta property="og:url" content="https://www.jejakmufassir.my.id">
+  <meta property="og:type" content="website">
+</head>
+<body>
+  <div style="text-align: center; padding: 50px;">
+    <h1>Loading...</h1>
+    <p>Please wait while we redirect you.</p>
+  </div>
+</body>
+</html>

@@ -48,7 +48,7 @@ export default function ShortLinkPage() {
         <meta property="og:title" content={metadata?.title || ''} />
         <meta property="og:description" content={metadata?.description || ''} />
         <meta property="og:image" content={metadata?.image || ''} />
-        <meta property="og:url" content={`https://yourdomain.com/${code}`} />
+        <meta property="og:url" content={`https://ahmadyani1st-short.vercel.app/${code}`} />
         <meta property="og:type" content="website" />
         
         {/* Twitter Card Tags */}

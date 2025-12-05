@@ -39,60 +39,37 @@ export default function ShortLinkPage({
 
   return (
     <>
-      <Head>
-        {/* Title - HANYA dari Firebase */}
-        <title>{title}</title>
-        <meta name="title" content={title} />
-        
-        {/* Description - HANYA dari Firebase */}
-        <meta name="description" content={description} />
-        
-        {/* ===== OPEN GRAPH TAGS ===== */}
-        {/* TYPE */}
-        <meta property="og:type" content="website" />
-        
-        {/* URL - INI YANG PENTING: gunakan target URL */}
-        <meta property="og:url" content={canonicalUrl} />
-        
-        {/* TITLE - HANYA dari Firebase */}
-        <meta property="og:title" content={title} />
-        
-        {/* DESCRIPTION - HANYA dari Firebase */}
-        <meta property="og:description" content={description} />
-        
-        {/* IMAGE - HANYA dari Firebase */}
-        <meta property="og:image" content={image} />
-        {image && (
-          <>
-            <meta property="og:image:width" content="1200" />
-            <meta property="og:image:height" content="630" />
-            <meta property="og:image:alt" content={title} />
-          </>
-        )}
-        
-        {/* SITE NAME - kosongkan atau beri nama Anda */}
-        <meta property="og:site_name" content="" />
-        
-        {/* ===== TWITTER CARDS ===== */}
-        <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
-        <meta name="twitter:url" content={canonicalUrl} />
-        <meta name="twitter:title" content={title} />
-        <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={image} />
-        
-        {/* ===== META LAINNYA ===== */}
-        {/* HINDARI meta viewport di Head untuk Facebook */}
-        <meta name="robots" content="noindex, nofollow" />
-        
-        {/* Canonical URL ke target */}
-        <link rel="canonical" href={canonicalUrl} />
-        
-        {/* Prev/Next kosong untuk hindari pagination */}
-        <link rel="prev" href="" />
-        <link rel="next" href="" />
-        
-        {/* Hapus semua meta yang tidak perlu */}
-      </Head>
+    <Head>
+  {/* ===== TITLE ===== */}
+  <title>{firebaseData?.title || 'Loading...'}</title>
+  <meta name="title" content={firebaseData?.title || ''} />
+  
+  {/* ===== OPEN GRAPH ===== */}
+  <meta property="og:type" content="website" />
+  {/* PENTING: URL HARUS SHORTLINK ANDA SENDIRI */}
+  <meta property="og:url" content={`https://${req.headers.host}/${code}`} />
+  <meta property="og:title" content={firebaseData?.title || ''} />
+  <meta property="og:description" content={firebaseData?.description || ''} />
+  <meta property="og:image" content={firebaseData?.image || ''} />
+  <meta property="og:site_name" content="Jejak Mufassir" />
+  
+  {/* ===== TWITTER ===== */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content={`https://${req.headers.host}/${code}`} />
+  <meta name="twitter:title" content={firebaseData?.title || ''} />
+  <meta name="twitter:description" content={firebaseData?.description || ''} />
+  <meta name="twitter:image" content={firebaseData?.image || ''} />
+  
+  {/* ===== ROBOTS ===== */}
+  <meta name="robots" content="noindex, nofollow" />
+  
+  {/* ===== CANONICAL (ke shortlink sendiri) ===== */}
+  <link rel="canonical" href={`https://${req.headers.host}/${code}`} />
+  
+  {/* ===== META LAINNYA ===== */}
+  <meta name="description" content={firebaseData?.description || ''} />
+  <meta name="image" content={firebaseData?.image || ''} />
+</Head>
 
       {/* VIEWPORT HANYA di HTML Body */}
       <meta name="viewport" content="width=device-width, initial-scale=1" />

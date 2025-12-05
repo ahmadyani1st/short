@@ -15,10 +15,10 @@ export default async function handler(req, res) {
     }
     
     // Jika sudah ada metadata di Firebase, langsung kembalikan
-    if (data.name || data.description || data.image) {
+    if (data.title || data.description || data.image) {
       return res.json({
         url: data.linkproduk,
-        title: data.name || '',
+        title: data.title || '',
         description: data.description || '',
         image: data.image || ''
       });
